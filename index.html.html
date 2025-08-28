@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Escape Room Pentafon x DHL — Terror</title>
+  <style>
+    :root{
+      --dhl-yellow:#FFCC00;
+      --dhl-red:#D40511;
+      --ink:#0c0c0d;
+      --bg:#0a0a0a;
+      --card:#141414;
+      --muted:#b8b8b8;
+      --ok:#29d17e;
+      --bad:#ff3b3b;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Ubuntu,Arial,sans-serif;
+      color:#eee;
+      background: radial-gradient(1200px 800px at 80% -10%, rgba(255,255,255,0.04), transparent 40%),
+                  radial-gradient(800px 600px at 0% 100%, rgba(255,0,0,0.03), transparent 40%),
+                  #000; 
+    }
+    header{
+      background: linear-gradient(90deg,var(--dhl-red),var(--dhl-yellow));
+      color:#111;
+      padding:10px 14px; display:flex; align-items:center; gap:12px; position:sticky; top:0; z-index:10;
+      border-bottom:3px solid #00000066;
+    }
+    header .logo{
+      display:flex; align-items:center; gap:10px; font-weight:900; letter-spacing:.4px;
+    }
+    .logo svg{width:30px;height:30px; filter:drop-shadow(0 0 4px rgba(0,0,0,.3))}
+    .tag{font-size:12px; font-weight:700; background:var(--ink); color:var(--dhl-yellow); padding:2px 6px; border-radius:999px;}
+
+    .top-actions{margin-left:auto; display:flex; align-items:center; gap:8px;}
+    .btn{background:#fff; color:#111; border:none; padding:10px 14px; border-radius:12px; font-weight:700; cursor:pointer; box-shadow:0 4px 0 #00000040; transition:.15s transform, .15s box-shadow;}
+    .btn:hover{transform:translateY(-2px); box-shadow:0 6px 0 #00000066}
+    .btn:active{transform:translateY(0); box-shadow:0 2px 0 #00000066}
+    .btn.ghost{background:transparent; color:#111; border:2px solid #111}
+    .btn.warn{background:var(--dhl-red); color:#fff}
+    .btn.ok{background:var(--ok); color:#111}
+
+    main{max-width:1100px; margin:18px auto; padding:0 16px; display:grid; grid-template-columns: 1fr; gap:16px}
+
+    .panel{background:linear-gradient(180deg,#121212,#0a0a0a); border:1px solid #222; border-radius:18px; padding:18px; position:relative; overflow:hidden}
+    .panel h2{margin:6px 0 10px}
+    .muted{color:#cfcfcf}
+
+    .grid{display:grid; grid-template-columns:1.1fr .9fr; gap:16px}
+    @media (max-width:920px){.grid{grid-template-columns:1fr}}
+
+    /* Scene / set design */
+    .scene{
+      position:relative; min-height:280px; border-radius:14px; overflow:hidden; border:1px solid #222;
+      background:#050505;
+      display:flex; align-items:stretch;
+      box-shadow: inset 0 0 80px #000, inset 0 0 160px #000;
+    }
+    .scene-layer{position:absolute; inset:0; background-position:center; background-size:cover; opacity:.65; filter:grayscale(100%) contrast(120%)}
+    .scene-overlay{position:absolute; inset:0; background:radial-gradient(60% 60% at 50% 40%, transparent, rgba(0,0,0,.8) 70%)}
+    .scene-caption{position:absolute; left:12px; bottom:10px; background:#00000080; padding:6px 10px; border:1px solid #222; border-radius:10px; font-size:13px}
+    .flicker{animation:flick 10s infinite linear}
+    @keyframes flick{ 0%{opacity:.9} 1%{opacity:.6} 2%{opacity:.95} 3%{opacity:.5} 4%{opacity:.92} 5%{opacity:.9} 100%{opacity:.9}}
+
+    .intro{background:#0b0b0b; border:1px solid #222; border-radius:12px; padding:14px; line-height:1.5}
+    .intro b{color:var(--dhl-yellow)}
+
+    .question-card{background:#0c0c0c; border:1px solid #222; border-radius:14px; padding:16px}
+    .options{display:grid; grid-template-columns:1fr; gap:10px; margin-top:12px}
+    .option{background:#fff; color:#111; border:3px solid transparent; border-radius:12px; padding:12px; font-weight:800; cursor:pointer; text-align:left}
+    .option:hover{border-color:var(--dhl-red)}
+
+    .progress{height:10px; background:#191919; border:1px solid #222; border-radius:999px; overflow:hidden}
+    .progress > span{display:block; height:100%; background:linear-gradient(90deg,var(--dhl-yellow),var(--dhl-red)); width:0%}
+
+    .status{font-size:13px; color:#ddd; display:flex; align-items:center; gap:8px; min-height:22px}
+    .status .pill{padding:2px 8px; border-radius:999px; font-weight:700}
+
+    /* Scary overlay */
+    .scare{position:fixed; inset:0; display:none; place-items:center; background:#000; z-index:1000}
+    .scare.active{display:grid; animation:flash .9s ease}
+    @keyframes flash{0%{background:#000} 20%{background:#890000} 40%{background:#000} 60%{background:#890000} 100%{background:#000}}
+    .monster{width:min(560px,90vw); aspect-ratio:1/1;}
+
+    /* Editor */
+    .editor-login{display:flex; gap:8px; align-items:center}
+    .input, textarea{background:#0d0d0d; color:#eee; border:1px solid #2a2a2a; border-radius:10px; padding:10px 12px}
+    .input::placeholder{color:#888}
+    .table{width:100%; border-collapse:collapse; font-size:14px}
+    .table th,.table td{border-bottom:1px solid #222; padding:8px 6px; text-align:left}
+    .stat{background:#0c0c0c; border:1px solid #222; border-radius:12px; padding:10px 12px}
+    .chips{display:flex; flex-wrap:wrap; gap:8px}
+    .chip{background:#111; border:1px solid #222; padding:6px 8px; border-radius:999px}
+
+    .leaderboard .rank{font-weight:900}
+    .small{font-size:12px; color:#aaa}
+    .sep{height:1px; background:#1f1f1f; margin:12px 0}
+
+    footer{opacity:.7; font-size:12px; text-align:center; padding:16px 8px}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo" title="Pentafon · Piso de cobranza">
+      <!-- Headset + phone SVG to evocar Call Center Pentafon -->
+      <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <circle cx="32" cy="32" r="28" stroke="#111" stroke-width="8" fill="#FFCC00"/>
+        <path d="M20 36a12 12 0 0124 0v6a4 4 0 01-4 4h-2l-3 6h-6l-3-6h-2a4 4 0 01-4-4v-6z" fill="#111"/>
+        <rect x="14" y="28" width="6" height="12" rx="3" fill="#D40511"/>
+        <rect x="44" y="28" width="6" height="12" rx="3" fill="#D40511"/>
+      </svg>
+      <div>
+        <div style="font-size:16px; line-height:1;">Escape Room <span style="font-weight:800">Pentafon</span></div>
+        <div class="tag" title="Paleta DHL">DHL Mode</div>
+      </div>
+    </div>
+    <div class="top-actions">
+      <div class="editor-login" id="editorLogin">
+        <input id="pwdInput" class="input" type="password" placeholder="Contraseña de editor"/>
+        <button class="btn" id="btnEditorLogin">Entrar editor</button>
+      </div>
+      <button class="btn ghost" id="btnVerJugador" style="display:none">Modo jugador</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- PANEL JUGADOR -->
+    <section class="panel" id="playerPanel">
+      <div class="grid">
+        <div>
+          <div class="scene" id="scene">
+            <div class="scene-layer" id="sceneLayer"></div>
+            <div class="scene-overlay flicker"></div>
+            <div class="scene-caption" id="sceneCaption">Piso de llamadas apagado… los monitores parpadean.</div>
+          </div>
+          <div class="sep"></div>
+          <div class="intro" id="intro">
+            <p><b>Turno extra, 23:47.</b> Eres el último en el piso de <b>Pentafon</b>. El reloj se detuvo a las 23:13.
+              Los focos parpadean con un zumbido áspero. Desde el pasillo del <i>backoffice</i> se escucha un teléfono sonar, aunque las líneas están descolgadas.
+              Un mensaje en la pared, pintado con marcador rojo (o eso quieres creer), dice: <b>“Responde bien para salir… o quédate para siempre.”</b></p>
+            <p>Ingresa tu nombre y empieza. Cada respuesta correcta te hará <b>avanzar</b>. Si fallas, algo despierta… y <b>no</b> tendrás segunda oportunidad.</p>
+          </div>
+        </div>
+        <div>
+          <div class="question-card">
+            <label for="playerName" class="small">Nombre completo</label>
+            <input id="playerName" class="input" type="text" placeholder="Nombre y apellidos" />
+            <div style="display:flex; gap:8px; margin-top:10px">
+              <button class="btn" id="btnComenzar">Comenzar</button>
+              <div class="status" id="status"></div>
+            </div>
+            <div class="sep"></div>
+            <div class="progress" aria-label="Progreso"><span id="progressBar"></span></div>
+            <div id="qa" style="margin-top:14px; display:none">
+              <div class="small" id="stepLabel">Pregunta 1</div>
+              <h2 id="questionText">Pregunta…</h2>
+              <div class="options" id="options"></div>
+              <div class="status" id="answerStatus"></div>
+            </div>
+            <div id="final" style="display:none">
+              <h2>¡Saliste del piso… por ahora!</h2>
+              <p class="muted">Resultado: <b id="scoreText"></b></p>
+              <div class="sep"></div>
+              <div class="leaderboard" id="leaderboard"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PANEL EDITOR -->
+    <section class="panel" id="editorPanel" style="display:none">
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:10px">
+        <h2>Panel del editor</h2>
+        <div style="display:flex; gap:8px">
+          <button class="btn ok" id="btnExportCSV">Exportar respuestas (CSV)</button>
+          <button class="btn" id="btnExportQuestions">Exportar preguntas (JSON)</button>
+          <label class="btn ghost" for="importQ">Importar preguntas (JSON)</label>
+          <input id="importQ" type="file" accept="application/json" style="display:none" />
+          <button class="btn warn" id="btnReset">Restablecer TODAS las respuestas</button>
+          <button class="btn ghost" id="btnLogout">Cerrar sesión</button>
+        </div>
+      </div>
+      <p class="small">Solo tú puedes ver este panel. Contraseña requerida para entrar.</p>
+      <div class="grid">
+        <div>
+          <h3>Estadísticas</h3>
+          <div class="chips" id="statsChips"></div>
+          <div class="sep"></div>
+          <h3>Respuestas ingresadas</h3>
+          <div style="max-height:320px; overflow:auto; border:1px solid #222; border-radius:12px">
+            <table class="table" id="responsesTable">
+              <thead><tr><th>Fecha</th><th>Jugador</th><th>Idx</th><th>Pregunta</th><th>Opción</th><th>Correcta</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+        <div>
+          <h3>Configurar preguntas</h3>
+          <div id="questionsEditor"></div>
+          <div style="display:flex; gap:8px; margin-top:10px">
+            <button class="btn" id="btnAddQ">+ Agregar pregunta</button>
+            <button class="btn ok" id="btnSaveQ">Guardar configuración</button>
+          </div>
+          <p class="small">Define texto, opciones y marca la respuesta correcta. Los cambios aplican a nuevas partidas.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div class="scare" id="scare">
+    <!-- SVG monstruo estilizado para el sobresalto -->
+    <svg class="monster" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <radialGradient id="g" cx="50%" cy="40%" r="60%">
+          <stop offset="0%" stop-color="#6b0000"/>
+          <stop offset="100%" stop-color="#000"/>
+        </radialGradient>
+        <filter id="noise">
+          <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" stitchTiles="stitch"/>
+          <feColorMatrix type="saturate" values="0"/>
+          <feComponentTransfer>
+            <feFuncA type="table" tableValues="0 1"/>
+          </feComponentTransfer>
+        </filter>
+      </defs>
+      <rect width="100%" height="100%" fill="url(#g)"/>
+      <g filter="url(#noise)" opacity=".2"><rect width="100%" height="100%"/></g>
+      <g fill="#e7e7e7">
+        <ellipse cx="170" cy="200" rx="80" ry="60"/>
+        <ellipse cx="342" cy="200" rx="80" ry="60"/>
+      </g>
+      <g fill="#0c0c0c">
+        <circle cx="170" cy="205" r="30"/>
+        <circle cx="342" cy="205" r="30"/>
+      </g>
+      <path d="M100 360 C 180 300, 332 300, 412 360 S 360 460, 256 460 132 420, 100 360" fill="#fff"/>
+      <path d="M118 370 Q 256 440 394 370" fill="none" stroke="#d40511" stroke-width="14" stroke-linecap="round"/>
+    </svg>
+  </div>
+
+  <footer>Hecho para Pentafon • Estética en colores DHL • Solo para uso demostrativo. Almacena datos en tu navegador (localStorage).</footer>
+
+  <script>
+  // =============================
+  // CONFIGURACIÓN GENERAL
+  // =============================
+  const EDITOR_PASSWORD = "PentafonDHL2025"; // de conversaciones previas
+  const LS_KEYS = {
+    questions: 'escape_questions_v1',
+    responses: 'escape_responses_v1',
+    leaderboard: 'escape_leaderboard_v1'
+  };
+
+  // Escenografía que avanza (capas SVG inlines como data URLs para evitar dependencias)
+  const SCENES = [
+    { name: 'Piso de llamadas', svg: sceneSVG('headsets') },
+    { name: 'Pasillo de backoffice', svg: sceneSVG('hall') },
+    { name: 'Archivo muerto', svg: sceneSVG('files') },
+    { name: 'Cuarto de servidores', svg: sceneSVG('servers') },
+    { name: 'Salida de emergencia', svg: sceneSVG('exit') }
+  ];
+
+  function sceneSVG(type){
+    // pequeñas escenas monocromáticas para dar atmósfera; retornan data URL
+    let markup='';
+    if(type==='headsets'){
+      markup = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 600"><rect width="1200" height="600" fill="#020202"/><g opacity=".65" fill="#cfcfcf"><g>
+        <path d="M180 200a80 80 0 01160 0v40a20 20 0 01-20 20h-10l-15 30h-70l-15-30h-10a20 20 0 01-20-20v-40z"/>
+        <rect x="120" y="180" width="30" height="70" rx="12"/><rect x="370" y="180" width="30" height="70" rx="12"/></g>
+        <g transform="translate(300,120)"><path d="M180 200a80 80 0 01160 0v40a20 20 0 01-20 20h-10l-15 30h-70l-15-30h-10a20 20 0 01-20-20v-40z"/></g>
+        <g transform="translate(620,40)"><path d="M180 200a80 80 0 01160 0v40a20 20 0 01-20 20h-10l-15 30h-70l-15-30h-10a20 20 0 01-20-20v-40z"/></g>
+      </g></svg>`;
+    }
+    if(type==='hall'){
+      markup = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 600"><defs><linearGradient id="lg" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#111"/><stop offset="1" stop-color="#000"/></linearGradient></defs><rect width="1200" height="600" fill="url(#lg)"/><g stroke="#444" stroke-width="8"><path d="M0 600 L300 0 L900 0 L1200 600"/></g><g fill="#333"><rect x="560" y="240" width="80" height="140"/><rect x="580" y="280" width="40" height="40" fill="#000"/></g></svg>`;
+    }
+    if(type==='files'){
+      markup = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 600"><rect width="1200" height="600" fill="#050505"/><g fill="#2b2b2b"><rect x="120" y="120" width="200" height="360"/><rect x="360" y="100" width="200" height="400"/><rect x="600" y="140" width="200" height="360"/><rect x="840" y="120" width="200" height="380"/></g><g fill="#111"><rect x="145" y="150" width="150" height="20"/><rect x="385" y="130" width="150" height="20"/><rect x="625" y="170" width="150" height="20"/><rect x="865" y="150" width="150" height="20"/></g></svg>`;
+    }
+    if(type==='servers'){
+      markup = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 600"><rect width="1200" height="600" fill="#020202"/><g><rect x="220" y="80" width="230" height="440" fill="#0f0f0f" stroke="#222"/><rect x="480" y="80" width="230" height="440" fill="#0f0f0f" stroke="#222"/><rect x="740" y="80" width="230" height="440" fill="#0f0f0f" stroke="#222"/></g><g fill="#1b1b1b"><rect x="240" y="120" width="190" height="24"/><rect x="240" y="160" width="190" height="24"/><rect x="240" y="200" width="190" height="24"/><rect x="500" y="120" width="190" height="24"/><rect x="500" y="160" width="190" height="24"/><rect x="500" y="200" width="190" height="24"/><rect x="760" y="120" width="190" height="24"/><rect x="760" y="160" width="190" height="24"/><rect x="760" y="200" width="190" height="24"/></g></svg>`;
+    }
+    if(type==='exit'){
+      markup = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 600"><rect width="1200" height="600" fill="#010101"/><g><rect x="460" y="120" width="280" height="360" fill="#0b0b0b" stroke="#2a2a2a"/><rect x="592" y="270" width="16" height="40" fill="#d40511"/></g><text x="600" y="520" fill="#FFCC00" font-size="48" text-anchor="middle" font-family="monospace">EXIT</text></svg>`;
+    }
+    return 'url("data:image/svg+xml;utf8,' + encodeURIComponent(markup) + '")';
+  }
+
+  // Preguntas predeterminadas del usuario
+  const DEFAULT_QUESTIONS = [
+    {
+      text: '¿Qué archivo te brinda el detalle del cobro de una factura?',
+      options: ['Acre','Factura','Guía'],
+      correctIndex: 0
+    },
+    {
+      text: '¿Qué archivo debes consultar para localizar el código verificador?',
+      options: ['Asignación','Acre','Cálculo verificador'],
+      correctIndex: 2
+    },
+    {
+      text: '¿Cuál es el costo de la refacturación en el año 2025?',
+      options: ['406.58 + IVA','406.58 IVA incluido','408.58 IVA incluido'],
+      correctIndex: 1
+    },
+    {
+      text: '¿En qué estatus se puede reactivar la cuenta con DHL?',
+      options: ['Aclaración','Pagada','Retirada'],
+      correctIndex: 1
+    }
+  ];
+
+  // Utilidades de almacenamiento
+  function loadQuestions(){
+    const raw = localStorage.getItem(LS_KEYS.questions);
+    if(!raw){
+      localStorage.setItem(LS_KEYS.questions, JSON.stringify(DEFAULT_QUESTIONS));
+      return DEFAULT_QUESTIONS.slice();
+    }
+    try{ return JSON.parse(raw); }catch{ return DEFAULT_QUESTIONS.slice(); }
+  }
+  function saveQuestions(q){ localStorage.setItem(LS_KEYS.questions, JSON.stringify(q)); }
+  function pushResponse(resp){
+    const arr = JSON.parse(localStorage.getItem(LS_KEYS.responses) || '[]');
+    arr.push(resp); localStorage.setItem(LS_KEYS.responses, JSON.stringify(arr));
+  }
+  function getResponses(){ return JSON.parse(localStorage.getItem(LS_KEYS.responses) || '[]'); }
+  function resetResponses(){ localStorage.removeItem(LS_KEYS.responses); localStorage.removeItem(LS_KEYS.leaderboard); }
+  function pushLeaderboard(entry){
+    const arr = JSON.parse(localStorage.getItem(LS_KEYS.leaderboard) || '[]');
+    arr.push(entry); localStorage.setItem(LS_KEYS.leaderboard, JSON.stringify(arr));
+  }
+  function getLeaderboard(){ return JSON.parse(localStorage.getItem(LS_KEYS.leaderboard) || '[]'); }
+
+  // =============================
+  // AUDIO (Web Audio API)
+  // =============================
+  let audioCtx = null;
+  function ensureAudio(){ if(!audioCtx){ audioCtx = new (window.AudioContext || window.webkitAudioContext)(); backgroundDrone(); } }
+
+  function backgroundDrone(){
+    if(!audioCtx) return;
+    // Drone tenue: oscilador + LFO
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    const lfo = audioCtx.createOscillator();
+    const lfoGain = audioCtx.createGain();
+    o.type='sawtooth'; o.frequency.value=48; // grave
+    g.gain.value=0.03; // bajo volumen
+    lfo.type='sine'; lfo.frequency.value=0.15; lfoGain.gain.value=14; // modula pitch
+    lfo.connect(lfoGain); lfoGain.connect(o.frequency);
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(); lfo.start();
+  }
+  function sfxCorrect(){
+    if(!audioCtx) return;
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.type='triangle'; o.frequency.setValueAtTime(440,audioCtx.currentTime);
+    o.frequency.exponentialRampToValueAtTime(880,audioCtx.currentTime+0.25);
+    g.gain.setValueAtTime(0.0001,audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.08,audioCtx.currentTime+0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001,audioCtx.currentTime+0.5);
+    o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime+0.55);
+  }
+  function sfxWrong(){
+    if(!audioCtx) return;
+    const noise = audioCtx.createBufferSource();
+    const buffer = audioCtx.createBuffer(1, audioCtx.sampleRate*0.7, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for(let i=0;i<data.length;i++){ data[i] = (Math.random()*2-1) * (1 - i/data.length); }
+    noise.buffer=buffer;
+    const biquad = audioCtx.createBiquadFilter(); biquad.type='bandpass'; biquad.frequency.value=800;
+    const g = audioCtx.createGain(); g.gain.value=0.12;
+    const delay = audioCtx.createDelay(0.25); delay.delayTime.value=0.08;
+    const fb = audioCtx.createGain(); fb.gain.value=0.4; delay.connect(fb); fb.connect(delay);
+    noise.connect(biquad); biquad.connect(g); g.connect(audioCtx.destination); g.connect(delay); delay.connect(audioCtx.destination);
+    noise.start();
+    setTimeout(()=>noise.stop(), 650);
+  }
+
+  // =============================
+  // LÓGICA DE JUEGO
+  // =============================
+  let QUESTIONS = loadQuestions();
+  let currentIndex = 0, correctCount = 0, player = null, started = false;
+
+  const sceneLayer = document.getElementById('sceneLayer');
+  const sceneCaption = document.getElementById('sceneCaption');
+  const btnComenzar = document.getElementById('btnComenzar');
+  const playerNameInput = document.getElementById('playerName');
+  const qa = document.getElementById('qa');
+  const optionsBox = document.getElementById('options');
+  const questionText = document.getElementById('questionText');
+  const stepLabel = document.getElementById('stepLabel');
+  const progressBar = document.getElementById('progressBar');
+  const answerStatus = document.getElementById('answerStatus');
+  const status = document.getElementById('status');
+  const finalBox = document.getElementById('final');
+  const scoreText = document.getElementById('scoreText');
+  const leaderboardBox = document.getElementById('leaderboard');
+  const scare = document.getElementById('scare');
+
+  function setScene(idx){
+    const scene = SCENES[Math.min(idx, SCENES.length-1)];
+    sceneLayer.style.backgroundImage = scene.svg;
+    sceneCaption.textContent = `${scene.name}: el aire está frío…`;
+  }
+
+  function startGame(){
+    if(started) return; started = true;
+    ensureAudio();
+    player = (playerNameInput.value||'Sin nombre').trim();
+    if(!player){ alert('Ingresa tu nombre completo para empezar.'); started=false; return; }
+    currentIndex = 0; correctCount = 0;
+    status.innerHTML = `<span class="pill" style="background:var(--dhl-yellow)">¡Suerte, ${escapeHtml(player)}!</span>`;
+    qa.style.display='block';
+    finalBox.style.display='none';
+    setScene(0); renderQA();
+  }
+
+  function renderQA(){
+    const total = QUESTIONS.length;
+    if(currentIndex>=total){ return endGame(); }
+    const q = QUESTIONS[currentIndex];
+    stepLabel.textContent = `Pregunta ${currentIndex+1} de ${total}`;
+    questionText.textContent = q.text;
+    optionsBox.innerHTML = '';
+    progressBar.style.width = `${(currentIndex/total)*100}%`;
+    answerStatus.textContent = '';
+
+    q.options.forEach((opt, i)=>{
+      const btn = document.createElement('button');
+      btn.className='option';
+      btn.textContent = `${i+1}. ${opt}`;
+      btn.addEventListener('click', ()=> handleAnswer(i));
+      optionsBox.appendChild(btn);
+    });
+  }
+
+  function handleAnswer(i){
+    const q = QUESTIONS[currentIndex];
+    const correct = (i === Number(q.correctIndex));
+    // Registrar respuesta
+    pushResponse({
+      ts: new Date().toISOString(),
+      player, qIndex: currentIndex, question: q.text, optionIndex: i, option: q.options[i], correct
+    });
+
+    if(correct){
+      correctCount++;
+      answerStatus.innerHTML = `<span class="pill" style="background:var(--ok); color:#111">Correcta. Avanzas…</span>`;
+      sfxCorrect();
+      setScene(currentIndex+1);
+      setTimeout(()=>{ currentIndex++; renderQA(); }, 750);
+    } else {
+      answerStatus.innerHTML = `<span class=\"pill\" style=\"background:var(--bad)\">Incorrecta. Algo se movió detrás de ti…</span>`;
+      sfxWrong();
+      jumpScare();
+      // Continúa sin reintento
+      setScene(currentIndex+1);
+      setTimeout(()=>{ currentIndex++; renderQA(); }, 900);
+    }
+  }
+
+  function jumpScare(){
+    scare.classList.add('active');
+    if(navigator.vibrate) try{ navigator.vibrate([50,50,120]); }catch{}
+    setTimeout(()=> scare.classList.remove('active'), 500);
+  }
+
+  function endGame(){
+    const total = QUESTIONS.length;
+    progressBar.style.width = '100%';
+    qa.style.display='none';
+    finalBox.style.display='block';
+    const pct = Math.round((correctCount/total)*100);
+    scoreText.textContent = `${correctCount} / ${total} (${pct}%)`;
+    pushLeaderboard({ name: player, score: correctCount, total, pct, ts: new Date().toISOString() });
+    renderLeaderboard();
+  }
+
+  function renderLeaderboard(){
+    const rows = (getLeaderboard()||[]).slice().sort((a,b)=> b.score - a.score || new Date(a.ts)-new Date(b.ts));
+    let html = '<h3>Tablero de participantes</h3>';
+    if(!rows.length){ html += '<p class="muted">Aún no hay participantes.</p>'; leaderboardBox.innerHTML = html; return; }
+    html += '<table class="table"><thead><tr><th class="rank">#</th><th>Nombre</th><th>Puntuación</th><th>%</th><th>Fecha</th></tr></thead><tbody>';
+    rows.forEach((r, idx)=>{
+      const date = new Date(r.ts).toLocaleString();
+      html += `<tr><td class="rank">${idx+1}</td><td>${escapeHtml(r.name)}</td><td>${r.score}/${r.total}</td><td>${r.pct}%</td><td><span class="small">${date}</span></td></tr>`;
+    });
+    html += '</tbody></table>';
+    leaderboardBox.innerHTML = html;
+  }
+
+  function escapeHtml(s){ return s.replace(/[&<>"']/g, c=> ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c])); }
+
+  // =============================
+  // EDITOR
+  // =============================
+  const editorPanel = document.getElementById('editorPanel');
+  const playerPanel = document.getElementById('playerPanel');
+  const btnEditorLogin = document.getElementById('btnEditorLogin');
+  const btnVerJugador = document.getElementById('btnVerJugador');
+  const pwdInput = document.getElementById('pwdInput');
+  const responsesTable = document.querySelector('#responsesTable tbody');
+  const statsChips = document.getElementById('statsChips');
+  const btnExportCSV = document.getElementById('btnExportCSV');
+  const btnExportQ = document.getElementById('btnExportQuestions');
+  const inputImportQ = document.getElementById('importQ');
+  const btnReset = document.getElementById('btnReset');
+  const btnLogout = document.getElementById('btnLogout');
+  const qEditor = document.getElementById('questionsEditor');
+  const btnAddQ = document.getElementById('btnAddQ');
+  const btnSaveQ = document.getElementById('btnSaveQ');
+
+  btnEditorLogin.addEventListener('click',()=>{
+    if(pwdInput.value === EDITOR_PASSWORD){
+      showEditor();
+    } else {
+      alert('Contraseña incorrecta.');
+    }
+  });
+  btnVerJugador.addEventListener('click', ()=>{ hideEditor(); });
+  btnLogout.addEventListener('click', ()=>{ hideEditor(); });
+
+  function showEditor(){
+    editorPanel.style.display='block';
+    playerPanel.style.display='none';
+    document.getElementById('btnVerJugador').style.display='inline-block';
+    renderResponses();
+    renderStats();
+    renderQEditor();
+  }
+  function hideEditor(){
+    editorPanel.style.display='none';
+    playerPanel.style.display='block';
+    document.getElementById('btnVerJugador').style.display='none';
+  }
+
+  function renderResponses(){
+    const rows = getResponses();
+    responsesTable.innerHTML = '';
+    rows.forEach(r=>{
+      const tr = document.createElement('tr');
+      const d = new Date(r.ts).toLocaleString();
+      tr.innerHTML = `<td><span class=small>${d}</span></td><td>${escapeHtml(r.player||'')}</td><td>${r.qIndex+1}</td><td>${escapeHtml(r.question)}</td><td>${escapeHtml(r.option)}</td><td>${r.correct?'✔️':'❌'}</td>`;
+      responsesTable.appendChild(tr);
+    });
+  }
+
+  function renderStats(){
+    const rows = getResponses();
+    const totalPlayers = getLeaderboard().length;
+    const byPlayer = new Map();
+    for(const r of rows){ if(!byPlayer.has(r.player)) byPlayer.set(r.player, {total:0, ok:0}); byPlayer.get(r.player).total++; if(r.correct) byPlayer.get(r.player).ok++; }
+    const avgAcc = rows.length? Math.round(100*([...byPlayer.values()].reduce((a,b)=>a + (b.ok/b.total),0) / byPlayer.size)) : 0;
+    const questions = loadQuestions();
+    const perQ = questions.map(()=>({t:0, ok:0}));
+    for(const r of rows){ perQ[r.qIndex].t++; if(r.correct) perQ[r.qIndex].ok++; }
+
+    statsChips.innerHTML = '';
+    const chip = (label)=>{ const el=document.createElement('div'); el.className='chip'; el.textContent=label; return el; };
+    statsChips.appendChild(chip(`Intentos: ${rows.length}`));
+    statsChips.appendChild(chip(`Participantes: ${totalPlayers}`));
+    statsChips.appendChild(chip(`Precisión promedio: ${isNaN(avgAcc)?0:avgAcc}%`));
+    perQ.forEach((q,i)=>{
+      const p = q.t? Math.round(100*q.ok/q.t):0; statsChips.appendChild(chip(`Q${i+1}: ${p}% acierto (${q.ok}/${q.t})`));
+    });
+  }
+
+  btnExportCSV.addEventListener('click',()=>{
+    const rows = getResponses();
+    if(!rows.length){ alert('No hay respuestas para exportar.'); return; }
+    const header = ['ts','player','qIndex','question','optionIndex','option','correct'];
+    const csv = [header.join(',')].concat(rows.map(r=> header.map(k=> JSON.stringify(r[k] ?? '')).join(','))).join('\n');
+    downloadText(csv, `respuestas_escape_${Date.now()}.csv`, 'text/csv');
+  });
+  const btnExportQuestions = document.getElementById('btnExportQuestions');
+  btnExportQuestions.addEventListener('click',()=>{
+    const q = loadQuestions();
+    downloadText(JSON.stringify(q,null,2), `preguntas_escape_${Date.now()}.json`, 'application/json');
+  });
+  inputImportQ.addEventListener('change', (e)=>{
+    const file = e.target.files[0]; if(!file) return;
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      try{ const data = JSON.parse(reader.result); if(Array.isArray(data) && data[0]?.text){ saveQuestions(data); QUESTIONS = loadQuestions(); alert('Preguntas importadas.'); renderQEditor(); }
+        else alert('Formato inválido.');
+      }catch{ alert('JSON inválido.'); }
+    };
+    reader.readAsText(file);
+  });
+  btnReset.addEventListener('click',()=>{
+    if(confirm('Esto borrará todas las respuestas y el tablero. ¿Continuar?')){ resetResponses(); renderResponses(); renderStats(); alert('Respuestas borradas.'); }
+  });
+
+  function downloadText(text, filename, mime){
+    const blob = new Blob([text], {type:mime});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href=url; a.download=filename; document.body.appendChild(a); a.click(); URL.revokeObjectURL(url); a.remove();
+  }
+
+  function renderQEditor(){
+    QUESTIONS = loadQuestions();
+    qEditor.innerHTML = '';
+    QUESTIONS.forEach((q, qi)=> qEditor.appendChild(questionEditorItem(q, qi)));
+  }
+  function questionEditorItem(q, qi){
+    const wrap = document.createElement('div'); wrap.className='stat';
+    const title = document.createElement('div'); title.innerHTML = `<b>Q${qi+1}</b>`; wrap.appendChild(title);
+    const inText = document.createElement('textarea'); inText.rows=2; inText.value=q.text; inText.style.width='100%'; inText.style.margin='6px 0'; wrap.appendChild(inText);
+
+    const optsWrap = document.createElement('div'); optsWrap.style.display='grid'; optsWrap.style.gap='8px'; wrap.appendChild(optsWrap);
+    function renderOpts(){
+      optsWrap.innerHTML='';
+      q.options.forEach((opt, oi)=>{
+        const row = document.createElement('div'); row.style.display='flex'; row.style.gap='8px'; row.style.alignItems='center';
+        const radio = document.createElement('input'); radio.type='radio'; radio.name='correct_'+qi; radio.checked = (Number(q.correctIndex)===oi);
+        radio.addEventListener('change', ()=> q.correctIndex = oi);
+        const input = document.createElement('input'); input.className='input'; input.style.flex='1'; input.value=opt;
+        input.addEventListener('input', ()=> q.options[oi] = input.value);
+        const del = document.createElement('button'); del.className='btn warn'; del.textContent='—'; del.title='Eliminar opción';
+        del.addEventListener('click', ()=>{ q.options.splice(oi,1); if(q.correctIndex>=q.options.length) q.correctIndex=0; renderOpts(); });
+        row.appendChild(radio); row.appendChild(input); row.appendChild(del); optsWrap.appendChild(row);
+      });
+    }
+    renderOpts();
+
+    const tools = document.createElement('div'); tools.style.display='flex'; tools.style.gap='8px'; tools.style.marginTop='8px';
+    const btnAddOpt = document.createElement('button'); btnAddOpt.className='btn'; btnAddOpt.textContent='+ Opción'; btnAddOpt.addEventListener('click',()=>{ q.options.push('Nueva opción'); renderOpts(); });
+    const btnRemoveQ = document.createElement('button'); btnRemoveQ.className='btn warn'; btnRemoveQ.textContent='Eliminar pregunta'; btnRemoveQ.addEventListener('click',()=>{ QUESTIONS.splice(qi,1); renderQEditor(); });
+    tools.appendChild(btnAddOpt); tools.appendChild(btnRemoveQ); wrap.appendChild(tools);
+
+    // guardar cambios en texto
+    inText.addEventListener('input', ()=> q.text = inText.value);
+    return wrap;
+  }
+
+  btnAddQ.addEventListener('click', ()=>{
+    QUESTIONS.push({ text:'Nueva pregunta', options:['Opción 1','Opción 2','Opción 3'], correctIndex:0 });
+    renderQEditor();
+  });
+  btnSaveQ.addEventListener('click', ()=>{ saveQuestions(QUESTIONS); alert('Preguntas guardadas.'); });
+
+  // =============================
+  // INIT
+  // =============================
+  setScene(0); renderLeaderboard();
+  btnComenzar.addEventListener('click', ()=> startGame());
+  // habilitar audio tras primera interacción con teclado también
+  playerNameInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ ensureAudio(); startGame(); }});
+
+  // Prellenar la contraseña en móvil? No. Solo placeholder.
+
+  </script>
+</body>
+</html>
